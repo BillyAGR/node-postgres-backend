@@ -3,7 +3,7 @@ const { faker } = require('@faker-js/faker');
 const boom = require('@hapi/boom');
 
 
-const pool = require('../libs/postgres.pool');
+const sequelize = require('../libs/sequelize');
 
 
 class ProductsService {
@@ -40,7 +40,7 @@ class ProductsService {
   async find() {
     const query = 'SELECT * FROM tasks';
     try {
-      const result = await pool.query(query);
+      const result = await sequelize.query(query);
       return result.rows;
     } catch (error) {
       console.error('Error in query:', error);
