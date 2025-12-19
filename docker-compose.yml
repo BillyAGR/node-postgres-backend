@@ -17,3 +17,25 @@ services:
       - PGADMIN_DEFAULT_PASSWORD=${PG_PASSWORD}
     ports:
       - ${PG_PORT}:${PG_REFPORT}
+  mysql:
+    image: mysql:5
+    environment:
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_PORT: ${MYSQL_PORT}
+    ports:
+      - ${MYSQL_PORT1}:${MYSQL_PORT}
+    volumes:
+      - ./mysql_data:/var/lib/mysql
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      PMA_PORT: mysql
+    ports:
+      - ${PHP_PORT}:${PG_REFPORT}
+
+
+

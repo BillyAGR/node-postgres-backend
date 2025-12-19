@@ -40,8 +40,8 @@ class ProductsService {
   async find() {
     const query = 'SELECT * FROM tasks';
     try {
-      const result = await sequelize.query(query);
-      return result.rows;
+      const [data] = await sequelize.query(query);
+      return data;
     } catch (error) {
       console.error('Error in query:', error);
       throw boom.internal('Database query failed');

@@ -7,7 +7,13 @@ const config = {
   dbPassword: process.env.DB_PASSWORD,
   dbHost: process.env.DB_HOST,
   dbName: process.env.DB_NAME,
-  dbPort: process.env.DB_PORT,
+  scheme: process.env.DB_SCHEME,      // mysql | postgresql
+  dialect: process.env.DB_DIALECT,  // mysql | postgres
 };
 
 module.exports = { config };
+
+
+
+
+
