@@ -8,7 +8,8 @@ class OrderService {
   }
 
   async create(data) {
-    return data;
+    const newOrder = await models.Order.create(data);
+    return newOrder;
   }
 
   async find() {
@@ -16,17 +17,33 @@ class OrderService {
   }
 
   async findOne(id) {
-    return { id };
+    const order = await models.Order.findByPk(id, {
+      include: [{
+        association: 'customer',
+        include: ['user']
+      }]
+    });
+    if (!order) {
+      throw boom.notFound('Order not found');
+    }
+    return order;
   }
 
   async update (id, changes) {
-    return {
-      id,
-      changes
-    };
+    const order = await models.Order.findByPk(id);
+    if (!order) {
+      throw boom.notFound('Order not found');
+    }
+    const updatedOrder = await order.update(changes);
+    return updatedOrder;
   }
 
   async delete(id) {
+    const order = await models.Order.findByPk(id);
+    if (!order) {
+      throw boom.notFound('Order not found');
+    }
+    await order.destroy();
     return { id };
   }
 }
