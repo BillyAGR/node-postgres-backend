@@ -12,6 +12,11 @@ class OrderService {
     return newOrder;
   }
 
+  async addItem(data) {
+    const newItem = await models.OrderProduct.create(data);
+    return newItem;
+  }
+
   async find() {
     return [];
   }
@@ -20,8 +25,10 @@ class OrderService {
     const order = await models.Order.findByPk(id, {
       include: [{
         association: 'customer',
-        include: ['user']
-      }]
+        include: ['user'],
+      },
+        'items'
+      ]
     });
     if (!order) {
       throw boom.notFound('Order not found');
@@ -29,7 +36,7 @@ class OrderService {
     return order;
   }
 
-  async update (id, changes) {
+  async update(id, changes) {
     const order = await models.Order.findByPk(id);
     if (!order) {
       throw boom.notFound('Order not found');
