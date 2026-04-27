@@ -32,11 +32,18 @@ class ProductsService {
     return newProduct;
   }
 
-  async find() {
+  async find(query) {
     try {
-      const products = await models.Product.findAll({
-        include: ['category']
-      });
+      const options = {
+        include: ['category'],
+      }
+
+      const { limit, offset } = query;
+      if (limit && offset) {
+        options.limit = limit;
+        options.offset = offset;
+      }
+      const products = await models.Product.findAll(options);
       return products;
     } catch (error) {
       console.error('Error in products query:', error);

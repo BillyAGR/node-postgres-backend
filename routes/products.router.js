@@ -1,22 +1,28 @@
 const express = require('express');
 const ProductsService = require('./../services/products.service');
 const validatorHandler = require('./../middlewares/validator.handler');
-const { createProductSchema, updateProductSchema, getProductSchema } = require('./../schemas/product.schemas')
+const { createProductSchema, updateProductSchema, getProductSchema, queryProductSchema } = require('./../schemas/product.schemas')
 
 const router = express.Router();
 const service = new ProductsService();
 
-router.get('/', async (req, res) => {
-  const products = await service.find();
-  res.json(products);
-});
+router.get('/',
+  validatorHandler(queryProductSchema, 'query'),
+  async (req, res, next) => {
+    try {
+      const products = await service.find(req.query);
+      res.json(products);
+    } catch (error) {
+      next(error);
+    }
+  });
 
-/* todas las rutas especificas deben estar antes de las dinamicas */
+/*  all specific routes must be before dynamic routes */
 router.get('/filter', async (req, res) => {
   res.send('I am a filter');
 });
 
-/* Ruta dinamica */
+/* dynamic router */
 router.get('/:id',
   validatorHandler(getProductSchema, 'params'),
   async (req, res, next) => {
