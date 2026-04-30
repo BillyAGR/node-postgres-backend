@@ -1,5 +1,6 @@
 
 const { faker } = require('@faker-js/faker');
+const { Op } = require('sequelize');
 const boom = require('@hapi/boom');
 
 
@@ -36,6 +37,8 @@ class ProductsService {
     try {
       const options = {
         include: ['category'],
+        where: {},
+        order: []
       }
 
       const { limit, offset } = query;
@@ -43,8 +46,23 @@ class ProductsService {
         options.limit = limit;
         options.offset = offset;
       }
+
+      const { price } = query;
+      if (price) {
+        options.where.price = price;
+      }
+
+      const { price_min, price_max } = query;
+      if (price_min && price_max) {
+        options.where.price = {
+          [Op.between]: [price_min, price_max]
+        }
+        options.order.push(['price', 'ASC']);
+      }
+
       const products = await models.Product.findAll(options);
       return products;
+
     } catch (error) {
       console.error('Error in products query:', error);
       throw boom.internal('Database error');
