@@ -2,45 +2,49 @@ const { Pool } = require('pg');
 
 const { config } = require('./../config/config');
 
-const USER = encodeURIComponent(config.dbUser);
-const PASSWORD = encodeURIComponent(config.dbPassword);
-const URI = `postgresql://${USER}:${PASSWORD}@${config.dbHost}:${config.dbPort}/${config.dbName}`;
-
+let URI = '';
+if (config.dbUrl) {
+  URI = config.dbUrl;
+} else {
+  const USER = encodeURIComponent(config.dbUser);
+  const PASSWORD = encodeURIComponent(config.dbPassword);
+  URI = `postgresql://${USER}:${PASSWORD}@${config.dbHost}:${config.dbPort}/${config.dbName}`;
+}
 class PostgresPool {
-  // Propiedad estática que guardará la instancia única
+  // Static property that will store the single instance.
   static instance = null;
 
   constructor() {
     if (PostgresPool.instance) {
-      // Si ya existe, devolvemos la misma instancia
+      // If it already exists, we return the same instance.
       return PostgresPool.instance;
     }
 
-    // Creamos el pool nativo de pg
+    // We create the native pg pool.
     this.pool = new Pool({ connectionString: URI });
 
-    // Escuchamos errores del pool
+    // We listen for errors in the pool.
     this.pool.on('error', (err) => {
       console.error('Error inesperado en el pool', err);
     });
 
     console.log('✅ Nueva instancia de Pool creada');
 
-    // Guardamos la instancia para futuras llamadas
+    // We save the instance for future calls.
     PostgresPool.instance = this;
   }
 
-  // Método de conveniencia para consultas
+  // Convenience method for queries
   async query(sql, params) {
     const result = await this.pool.query(sql, params);
     return result;
   }
 
-  // Método opcional para cerrar el pool si la app se apaga
+  // Optional method to close the pool if the app shuts down
   async close() {
     await this.pool.end();
     console.log('🔒 Pool cerrado correctamente');
   }
 }
 
-module.exports = new PostgresPool(); // Exportamos la única instancia
+module.exports = new PostgresPool(); // We export the single instance.
