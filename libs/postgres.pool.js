@@ -2,13 +2,20 @@ const { Pool } = require('pg');
 
 const { config } = require('./../config/config');
 
-let URI = '';
-if (config.dbUrl) {
+
+const options = {};
+
+
+if (config.isProd) {
   URI = config.dbUrl;
+  options.ssl = {
+    rejectUnauthorized: false,
+  };
 } else {
   const USER = encodeURIComponent(config.dbUser);
   const PASSWORD = encodeURIComponent(config.dbPassword);
-  URI = `postgresql://${USER}:${PASSWORD}@${config.dbHost}:${config.dbPort}/${config.dbName}`;
+  const URI = `postgresql://${USER}:${PASSWORD}@${config.dbHost}:${config.dbPort}/${config.dbName}`;
+  options.connectionString = URI;
 }
 class PostgresPool {
   // Static property that will store the single instance.
@@ -21,7 +28,7 @@ class PostgresPool {
     }
 
     // We create the native pg pool.
-    this.pool = new Pool({ connectionString: URI });
+    this.pool = new Pool(options);
 
     // We listen for errors in the pool.
     this.pool.on('error', (err) => {
