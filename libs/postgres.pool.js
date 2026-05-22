@@ -1,57 +1,89 @@
 const { Pool } = require('pg');
-
 const { config } = require('./../config/config');
-
 
 const options = {};
 
-
 if (config.isProd) {
-  URI = config.dbUrl;
+  options.connectionString = config.dbUrl;
+
   options.ssl = {
     rejectUnauthorized: false,
   };
 } else {
   const USER = encodeURIComponent(config.dbUser);
   const PASSWORD = encodeURIComponent(config.dbPassword);
-  const URI = `postgresql://${USER}:${PASSWORD}@${config.dbHost}:${config.dbPort}/${config.dbName}`;
-  options.connectionString = URI;
+
+  options.connectionString =
+    `postgresql://${USER}:${PASSWORD}@${config.dbHost}:${config.dbPort}/${config.dbName}`;
 }
+
 class PostgresPool {
-  // Static property that will store the single instance.
   static instance = null;
 
   constructor() {
     if (PostgresPool.instance) {
-      // If it already exists, we return the same instance.
       return PostgresPool.instance;
     }
 
-    // We create the native pg pool.
-    this.pool = new Pool(options);
+    this.pool = new Pool({
+      ...options,
 
-    // We listen for errors in the pool.
-    this.pool.on('error', (err) => {
-      console.error('Error inesperado en el pool', err);
+      // Recommended settings
+      max: 10,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 5000,
     });
 
-    console.log('✅ Nueva instancia de Pool creada');
+    // Pool error listener
+    this.pool.on('error', (err) => {
+      console.error('❌ Unexpected error on PostgreSQL pool:', err);
+    });
 
-    // We save the instance for future calls.
+    // New connection listener
+    this.pool.on('connect', () => {
+      console.log('🟢 New PostgreSQL connection established');
+    });
+
+    // Connection removed listener
+    this.pool.on('remove', () => {
+      console.log('🟡 PostgreSQL connection removed');
+    });
+
+    console.log('✅ New PostgreSQL pool instance created');
+
     PostgresPool.instance = this;
   }
 
-  // Convenience method for queries
-  async query(sql, params) {
-    const result = await this.pool.query(sql, params);
-    return result;
+  // General query method
+  async query(sql, params = []) {
+    try {
+      return await this.pool.query(sql, params);
+    } catch (error) {
+      console.error('❌ Error executing PostgreSQL query:', error);
+      throw error;
+    }
   }
 
-  // Optional method to close the pool if the app shuts down
+  // Get client for transactions
+  async getClient() {
+    try {
+      return await this.pool.connect();
+    } catch (error) {
+      console.error('❌ Error acquiring PostgreSQL client:', error);
+      throw error;
+    }
+  }
+
+  // Gracefully close the pool
   async close() {
-    await this.pool.end();
-    console.log('🔒 Pool cerrado correctamente');
+    try {
+      await this.pool.end();
+      console.log('🔒 PostgreSQL pool closed successfully');
+    } catch (error) {
+      console.error('❌ Error closing PostgreSQL pool:', error);
+      throw error;
+    }
   }
 }
 
-module.exports = new PostgresPool(); // We export the single instance.
+module.exports = new PostgresPool();
