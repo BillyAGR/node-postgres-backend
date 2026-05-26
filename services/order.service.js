@@ -1,57 +1,66 @@
 const boom = require('@hapi/boom');
-
-const { models } = require('./../libs/sequelize');
+const { models } = require('../libs/sequelize');
 
 class OrderService {
-
   constructor() {
+    this.model = models.Order;
+    this.orderProductModel = models.OrderProduct;
   }
 
   async create(data) {
-    const newOrder = await models.Order.create(data);
-    return newOrder;
+    return await this.model.create(data);
   }
 
   async addItem(data) {
-    const newItem = await models.OrderProduct.create(data);
-    return newItem;
+    return await this.orderProductModel.create(data);
   }
 
   async find() {
-    return [];
+    return await this.model.findAll({
+      include: [
+        {
+          association: 'customer',
+          include: ['user'],
+        },
+        'items',
+      ],
+    });
   }
 
   async findOne(id) {
-    const order = await models.Order.findByPk(id, {
-      include: [{
-        association: 'customer',
-        include: ['user'],
-      },
-        'items'
-      ]
-    });
-    if (!order) {
-      throw boom.notFound('Order not found');
-    }
+    const order = await this._getById(id);
     return order;
   }
 
   async update(id, changes) {
-    const order = await models.Order.findByPk(id);
-    if (!order) {
-      throw boom.notFound('Order not found');
-    }
-    const updatedOrder = await order.update(changes);
-    return updatedOrder;
+    const order = await this._getById(id);
+    await order.update(changes);
+    return order;
   }
 
   async delete(id) {
-    const order = await models.Order.findByPk(id);
+    const order = await this._getById(id);
+    await order.destroy();
+
+    return { id, deleted: true };
+  }
+
+  async _getById(id) {
+    const order = await this.model.findByPk(id, {
+      include: [
+        {
+          association: 'customer',
+          include: ['user'],
+        },
+        'items',
+      ],
+    });
+
     if (!order) {
       throw boom.notFound('Order not found');
     }
-    await order.destroy();
-    return { id };
+
+    return order;
   }
 }
 

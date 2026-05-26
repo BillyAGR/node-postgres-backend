@@ -1,48 +1,56 @@
 const boom = require('@hapi/boom');
-
-const { models } = require('./../libs/sequelize');
+const { models } = require('../libs/sequelize');
 
 class UserService {
-  constructor() { }
-  async create(data) {
+  constructor() {
+    this.model = models.User;
+  }
 
-    const exists = await models.User.findOne({
-      where: { email: data.email }
+  async create(data) {
+    const exists = await this.model.findOne({
+      where: { email: data.email },
     });
 
     if (exists) {
       throw boom.conflict('The email is already registered.');
     }
 
-    const newUser = await models.User.create(data);
-    return newUser;
+    return await this.model.create(data);
   }
 
   async find() {
-    const users = await models.User.findAll({
-      include: ['customer']
+    return await this.model.findAll({
+      include: ['customer'],
     });
-    return users;
   }
 
   async findOne(id) {
-    const user = await models.User.findByPk(id);
-    if (!user) {
-      throw boom.notFound('User not found');
-    }
-    return user;
+    return await this._getById(id);
   }
 
   async update(id, changes) {
-    const user = await models.User.findByPk(id);
-    const rta = await user.update(changes);
-    return rta;
+    const user = await this._getById(id);
+    await user.update(changes);
+    return user;
   }
 
   async delete(id) {
-    const user = await models.User.findByPk(id);
+    const user = await this._getById(id);
     await user.destroy();
-    return { id };
+
+    return { id, deleted: true };
+  }
+
+  async _getById(id) {
+    const user = await this.model.findByPk(id, {
+      include: ['customer'],
+    });
+
+    if (!user) {
+      throw boom.notFound('User not found');
+    }
+
+    return user;
   }
 }
 

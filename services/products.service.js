@@ -1,113 +1,78 @@
-
-const { faker } = require('@faker-js/faker');
-const { Op } = require('sequelize');
 const boom = require('@hapi/boom');
-
-
+const { Op } = require('sequelize');
 const { models } = require('../libs/sequelize');
 
-
 class ProductsService {
-
   constructor() {
-    this.products = [];
-    this.generate();
-  }
-
-  generate() {
-    const limit = 100;
-
-    for (let index = 0; index < limit; index++) {
-      this.products.push({
-        id: faker.string.uuid(),
-        name: faker.commerce.productName(),
-        price: parseInt(faker.commerce.price(), 10),
-        Image: faker.image.url(),
-        isBlock: faker.datatype.boolean(),
-      });
-    }
+    this.model = models.Product;
   }
 
   async create(data) {
-    const newProduct = await models.Product.create(data);
-    return newProduct;
+    return await this.model.create(data);
   }
 
-  async find(query) {
-    try {
-      const options = {
-        include: ['category'],
-        where: {},
-        order: []
-      }
+  async find(query = {}) {
+    const options = {
+      include: ['category'],
+      where: {},
+      order: [],
+    };
 
-      const { limit, offset } = query;
-      if (limit && offset) {
-        options.limit = limit;
-        options.offset = offset;
-      }
+    const limit = query.limit ? Number(query.limit) : undefined;
+    const offset = query.offset ? Number(query.offset) : undefined;
 
-      const { price } = query;
-      if (price) {
-        options.where.price = price;
-      }
-
-      const { price_min, price_max } = query;
-      if (price_min && price_max) {
-        options.where.price = {
-          [Op.between]: [price_min, price_max]
-        }
-        options.order.push(['price', 'ASC']);
-      }
-
-      const products = await models.Product.findAll(options);
-      return products;
-
-    } catch (error) {
-      console.error('Error in products query:', error);
-      throw boom.internal('Database error');
+    if (limit && offset) {
+      options.limit = limit;
+      options.offset = offset;
     }
-  }
 
+    if (query.price) {
+      options.where.price = Number(query.price);
+    }
+
+    if (query.price_min && query.price_max) {
+      options.where.price = {
+        [Op.between]: [Number(query.price_min), Number(query.price_max)],
+      };
+
+      options.order.push(['price', 'ASC']);
+    }
+
+    return await this.model.findAll(options);
+  }
 
   async findOne(id) {
-    const product = this.products.find(item => item.id === id);
+    const product = await this._getById(id);
+    return product;
+  }
+
+  async update(id, changes) {
+    const product = await this._getById(id);
+    await product.update(changes);
+    return product;
+  }
+
+  async delete(id) {
+    const product = await this._getById(id);
+    await product.destroy();
+
+    return { id, deleted: true };
+  }
+
+  async _getById(id) {
+    const product = await this.model.findByPk(id, {
+      include: ['category'],
+    });
+
     if (!product) {
       throw boom.notFound('Product not found');
     }
 
     if (product.isBlock) {
-      throw boom.conflict('Product is block');
+      throw boom.conflict('Product is blocked');
     }
+
     return product;
-  }
-
-  async update(id, changes) {
-    const index = this.products.findIndex(item => item.id === id);
-    if (index === -1) {
-      throw boom.notFound('Product not found');
-    }
-
-    const product = this.products[index];
-    if (product.isBlock) {
-      throw boom.conflict('Product is block');
-    }
-
-    this.products[index] = {
-      ...product,
-      ...changes
-    }
-
-    return this.products[index];
-  }
-
-  async delete(id) {
-    const index = this.products.findIndex(item => item.id === id);
-    if (index === -1) {
-      throw boom.notFound('Product not found');
-    }
-    this.products.splice(index, 1);
-    return { id };
   }
 }
 
