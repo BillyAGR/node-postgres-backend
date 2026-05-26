@@ -1,42 +1,76 @@
 const express = require('express');
 const cors = require('cors');
+
 const routerApi = require('./routes');
 
-const { logErrors, ormErrorHandler, errorHandler, boomErrorHandler } = require('./middlewares/error.handler');
+const {
+  logErrors,
+  ormErrorHandler,
+  boomErrorHandler,
+  errorHandler,
+} = require('./middlewares/error.handler');
 
 const app = express();
-const port = process.env.PORT || 3000;
 
+const PORT = process.env.PORT || 3000;
+
+const WHITE_LIST = [
+  'http://localhost:8080',
+  'http://127.0.0.1:5500',
+  'https://myapp.co',
+];
+
+/**
+ * Middlewares
+ */
 app.use(express.json());
 
-const whitelist = ['http://localhost:8080', 'https://myapp.co', 'http://127.0.0.1:5500'];
-const options = {
-  origin: (origin, callback) => {
-    if (whitelist.includes(origin) || !origin) {
-      callback(null, true);
-    } else {
-      callback(new Error('Its not permited'));
-    }
-  }
-}
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      const isAllowedOrigin =
+        WHITE_LIST.includes(origin) || !origin;
 
-app.use(cors(options));
+      if (isAllowedOrigin) {
+        return callback(null, true);
+      }
 
+      return callback(new Error('Origin not allowed'));
+    },
+  })
+);
+
+/**
+ * Health check
+ */
 app.get('/', (req, res) => {
-  res.send('Hi my server in express');
+  res.status(200).json({
+    message: 'API running successfully',
+  });
 });
 
 app.get('/new-path', (req, res) => {
-  res.send('Hi, i am new path');
+  res.status(200).json({
+    message: 'New path response',
+  });
 });
 
-app.listen(port, () => {
-  console.log('Mi port' + port);
-});
-
+/**
+ * Routes
+ */
 routerApi(app);
 
+/**
+ * Error handlers
+ */
 app.use(logErrors);
 app.use(ormErrorHandler);
 app.use(boomErrorHandler);
 app.use(errorHandler);
+
+/**
+ * Server
+ */
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+});
