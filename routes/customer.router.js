@@ -2,6 +2,7 @@ const express = require('express');
 
 const CustomerService = require('../services/customers.service');
 const validationHandler = require('../middlewares/validator.handler');
+
 const {
   createCustomerSchema,
   getCustomerSchema,
@@ -11,49 +12,70 @@ const {
 const router = express.Router();
 const service = new CustomerService();
 
-router.get('/', async (req, res, next) => {
-  try {
-    res.json(await service.find());
-  } catch (error) {
-    next(error);
-  }
+/**
+ * Async wrapper
+ */
+const asyncHandler = (fn) => (req, res, next) => {
+  Promise.resolve(fn(req, res, next)).catch(next);
+};
 
-});
+/**
+ * Get all customers
+ */
+router.get(
+  '/',
+  asyncHandler(async (req, res) => {
+    const customers = await service.find();
 
-router.post('/', validationHandler(createCustomerSchema, 'body'),
-  async (req, res, next) => {
-    try {
-      const body = req.body;
-      res.status(201).json(await service.create(body));
-    } catch (error) {
-      next(error);
-    }
-  }
+    res.json(customers);
+  })
 );
 
-router.patch('/:id',
+/**
+ * Create customer
+ */
+router.post(
+  '/',
+  validationHandler(createCustomerSchema, 'body'),
+
+  asyncHandler(async (req, res) => {
+    const newCustomer = await service.create(req.body);
+
+    res.status(201).json(newCustomer);
+  })
+);
+
+/**
+ * Update customer
+ */
+router.patch(
+  '/:id',
   validationHandler(getCustomerSchema, 'params'),
   validationHandler(updateCustomerSchema, 'body'),
-  async (req, res, next) => {
-    try {
-      const { id } = req.params;
-      const body = req.body;
-      res.status(201).json(await service.update(id, body));
-    } catch (error) {
-      next(error);
-    }
-  });
 
-router.delete('/:id',
+  asyncHandler(async (req, res) => {
+    const { id } = req.params;
+
+    const updatedCustomer = await service.update(id, req.body);
+
+    res.json(updatedCustomer);
+  })
+);
+
+/**
+ * Delete customer
+ */
+router.delete(
+  '/:id',
   validationHandler(getCustomerSchema, 'params'),
-  async (req, res, next) => {
-    try {
-      const { id } = req.params;
-      res.status(200).json(await service.delete(id));
-    } catch {
-      next(error);
-    }
-  }
-)
+
+  asyncHandler(async (req, res) => {
+    const { id } = req.params;
+
+    await service.delete(id);
+
+    res.status(204).send();
+  })
+);
 
 module.exports = router;

@@ -1,53 +1,66 @@
 const express = require('express');
 
-const OrderService = require('./../services/order.service');
-const validatorHandler = require('./../middlewares/validator.handler');
+const OrderService = require('../services/order.service');
+const validatorHandler = require('../middlewares/validator.handler');
+
 const {
   getOrderSchema,
   createOrderSchema,
-  addItemSchema
-} = require('./../schemas/order.schema');
+  addItemSchema,
+} = require('../schemas/order.schema');
 
 const router = express.Router();
 const service = new OrderService();
 
-router.get('/:id',
+/**
+ * Async wrapper
+ */
+const asyncHandler = (fn) => (req, res, next) => {
+  Promise.resolve(fn(req, res, next)).catch(next);
+};
+
+/**
+ * Get order by id
+ */
+router.get(
+  '/:id',
   validatorHandler(getOrderSchema, 'params'),
-  async (req, res, next) => {
-    try {
-      const { id } = req.params;
-      const order = await service.findOne(id);
-      res.json(order);
-    } catch (error) {
-      next(error);
-    }
-  }
+
+  asyncHandler(async (req, res) => {
+    const { id } = req.params;
+
+    const order = await service.findOne(id);
+
+    res.json(order);
+  })
 );
 
-router.post('/',
+/**
+ * Create order
+ */
+router.post(
+  '/',
   validatorHandler(createOrderSchema, 'body'),
-  async (req, res, next) => {
-    try {
-      const body = req.body;
-      const newOrder = await service.create(body);
-      res.status(201).json(newOrder);
-    } catch (error) {
-      next(error);
-    }
-  }
+
+  asyncHandler(async (req, res) => {
+    const newOrder = await service.create(req.body);
+
+    res.status(201).json(newOrder);
+  })
 );
 
-router.post('/add-item',
+/**
+ * Add item to order
+ */
+router.post(
+  '/add-item',
   validatorHandler(addItemSchema, 'body'),
-  async (req, res, next) => {
-    try {
-      const body = req.body;
-      const newItem = await service.addItem(body);
-      res.status(201).json(newItem);
-    } catch (error) {
-      next(error);
-    }
-  }
+
+  asyncHandler(async (req, res) => {
+    const newItem = await service.addItem(req.body);
+
+    res.status(201).json(newItem);
+  })
 );
 
 module.exports = router;
